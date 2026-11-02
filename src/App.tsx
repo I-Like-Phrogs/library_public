@@ -58,9 +58,22 @@ const movies: MovieClass[] = [
 movies.sort((a, b) => a.title.localeCompare(b.title, "pl"));
 
 function Movie(props: MovieProps) {
+  const handleCardClick = () => {
+    console.log(`Wybrano film: ${props.title}`);
+  };
+
+  const handleDetailsClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    console.log(`Pokaż szczegóły dla ${props.title}`);
+  };
+
   return (
     <div className="col-12 col-sm-6 col-lg-4 col-xl-3">
-      <div className="card h-100">
+      <div
+        className="card h-100"
+        onClick={handleCardClick}
+        style={{ cursor: "pointer" }}
+      >
         <img
           className="card-img-top"
           style={{ height: 375, objectFit: "cover" }}
@@ -73,6 +86,11 @@ function Movie(props: MovieProps) {
           {props.rating >= 0.8 && (
             <span className="badge text-bg-warning ms-2">Polecany</span>
           )}
+          <div className="mt-2">
+            <button className="btn btn-primary btn-sm" onClick={handleDetailsClick}>
+              Pokaż szczegóły
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -159,7 +177,9 @@ interface TrackProps {
   index: number;
   title: string;
   length: string;
+  onClick: () => void;
 }
+
 
 interface AlbumProps {
   coverUrl: string;
@@ -297,9 +317,10 @@ const albums: AlbumClass[] = [
 
 albums.sort((a, b) => a.title.localeCompare(b.title, "pl"));
 
+
 function Track(props: TrackProps) {
   return (
-    <tr>
+    <tr onClick={props.onClick} style={{ cursor: "pointer" }}>
       <td>{props.index}</td>
       <td>{props.title}</td>
       <td className="text-end">{props.length}</td>
@@ -308,6 +329,11 @@ function Track(props: TrackProps) {
 }
 
 function Album(props: AlbumProps) {
+  // Funkcja strzałkowa jest różna od zdefiniowanej przez "function" tym, że nie ma swojego "this", tu jednak to nie ma znaczenia
+  const handleSongClick = (songTitle: string) => {
+    console.log(`Wybrano utwór: ${songTitle} z ${props.title}`);
+  };
+
   return (
     <div className="col-12 col-lg-6 col-xl-4">
       <div className="card h-100">
@@ -317,6 +343,7 @@ function Album(props: AlbumProps) {
           src={props.coverUrl}
           alt={props.title}
         />
+
         <div className="card-body">
           <h2 className="card-title h5">{props.title}</h2>
           <p className="card-text">
@@ -338,7 +365,13 @@ function Album(props: AlbumProps) {
               </thead>
               <tbody>
                 {props.tracks.map((track) => (
-                  <Track key={track.index} {...track} />
+                  <Track
+                    key={track.index}
+                    index={track.index}
+                    title={track.title}
+                    length={track.length}
+                    onClick={() => handleSongClick(track.title)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -357,11 +390,19 @@ interface SectionProps {
 function Section(props: SectionProps) {
   const [isOpen, setIsOpen] = useState(true);
 
+  function handleHeaderClick() {
+    if (isOpen) {
+      setIsOpen(false);
+    } else {
+      setIsOpen(true);
+    }
+  }
+
   return (
     <div className="mb-4">
       <h1
         className="mt-4"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleHeaderClick}
         style={{ cursor: "pointer" }}
       >
         {isOpen ? "▾" : "▸"} {props.title}
@@ -373,51 +414,205 @@ function Section(props: SectionProps) {
 
 const recentMovies = movies.filter((movie) => movie.releaseYear > 2010);
 
-const booksNewestFirst = [...books].sort((a, b) => b.releaseYear - a.releaseYear);
+// slice() robi kopię tablicy, żeby sort nie zmienił oryginału
+const booksNewestFirst = books.slice().sort((a, b) => b.releaseYear - a.releaseYear);
 
-const albumWithMostTracks = albums.reduce((best, album) =>
-  album.tracks.length > best.tracks.length ? album : best
-);
+// album z największą liczbą utworów
+let albumWithMostTracks = albums[0];
+for (let i = 1; i < albums.length; i++) {
+  if (albums[i].tracks.length > albumWithMostTracks.tracks.length) {
+    albumWithMostTracks = albums[i];
+  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////  APP  /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function App() {
+  const [movieSearch, setMovieSearch] = useState("");
+  const [recentMovieSearch, setRecentMovieSearch] = useState("");
+  const [bookSearch, setBookSearch] = useState("");
+  const [newestBookSearch, setNewestBookSearch] = useState("");
+  const [albumSearch, setAlbumSearch] = useState("");
+  const [topAlbumSearch, setTopAlbumSearch] = useState("");
+
+  const filteredMovies = movies.filter((movie) =>
+    movie.title.toLowerCase().includes(movieSearch.toLowerCase())
+  );
+
+  // elementy z filmami albo komunikat, gdy nic nie znaleziono
+  let moviesContent;
+  if (filteredMovies.length === 0) {
+    moviesContent = (
+      <div className="col-12">
+        <div className="alert alert-warning mb-0" role="alert">
+          Nie znaleziono filmów
+        </div>
+      </div>
+    );
+  } else {
+    moviesContent = filteredMovies.map((movie) => (
+      <Movie
+        key={movie.title}
+        posterUrl={movie.posterUrl}
+        title={movie.title}
+        releaseYear={movie.releaseYear}
+        rating={movie.rating}
+      />
+    ));
+  }
+
   return (
     <div className="container">
       <Section title="Filmy">
-        {movies.map((movie) => (
-          <Movie key={movie.title} {...movie} />
-        ))}
+        <div className="col-12">
+          <input
+            id="movie-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={movieSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setMovieSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {movieSearch}</small>
+        </div>
+
+        {moviesContent}
       </Section>
 
       <Section title="Filmy wydane po 2010 roku">
+        <div className="col-12">
+          <input
+            id="recent-movie-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={recentMovieSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setRecentMovieSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {recentMovieSearch}</small>
+        </div>
         {recentMovies.map((movie) => (
-          <Movie key={movie.title} {...movie} />
+          <Movie
+            key={movie.title}
+            posterUrl={movie.posterUrl}
+            title={movie.title}
+            releaseYear={movie.releaseYear}
+            rating={movie.rating}
+          />
         ))}
       </Section>
 
       <Section title="Książki">
+        <div className="col-12">
+          <input
+            id="book-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={bookSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setBookSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {bookSearch}</small>
+        </div>
         {books.map((book) => (
-          <Book key={book.title} {...book} />
+          <Book
+            key={book.title}
+            coverUrl={book.coverUrl}
+            title={book.title}
+            releaseYear={book.releaseYear}
+            numPages={book.numPages}
+          />
         ))}
       </Section>
 
       <Section title="Książki od najnowszej">
+        <div className="col-12">
+          <input
+            id="newest-book-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={newestBookSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setNewestBookSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {newestBookSearch}</small>
+        </div>
         {booksNewestFirst.map((book) => (
-          <Book key={book.title} {...book} />
+          <Book
+            key={book.title}
+            coverUrl={book.coverUrl}
+            title={book.title}
+            releaseYear={book.releaseYear}
+            numPages={book.numPages}
+          />
         ))}
       </Section>
 
       <Section title="Albumy">
+        <div className="col-12">
+          <input
+            id="album-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={albumSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setAlbumSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {albumSearch}</small>
+        </div>
         {albums.map((album) => (
-          <Album key={album.title} {...album} />
+          <Album
+            key={album.title}
+            coverUrl={album.coverUrl}
+            title={album.title}
+            band={album.band}
+            genre={album.genre}
+            releaseYear={album.releaseYear}
+            tracks={album.tracks}
+          />
         ))}
       </Section>
 
       <Section title="Album z największą liczbą utworów">
-        <Album {...albumWithMostTracks} />
+        <div className="col-12">
+          <input
+            id="top-album-search"
+            type="text"
+            className="form-control"
+            placeholder="Wpisz tytuł"
+            value={topAlbumSearch}
+            onChange={(e) => {
+              console.log(e.target.value);
+              setTopAlbumSearch(e.target.value);
+            }}
+          />
+          <small className="form-text text-muted">Wpisano: {topAlbumSearch}</small>
+        </div>
+        <Album
+          coverUrl={albumWithMostTracks.coverUrl}
+          title={albumWithMostTracks.title}
+          band={albumWithMostTracks.band}
+          genre={albumWithMostTracks.genre}
+          releaseYear={albumWithMostTracks.releaseYear}
+          tracks={albumWithMostTracks.tracks}
+        />
       </Section>
     </div>
   );
