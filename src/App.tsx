@@ -53,6 +53,18 @@ const movies: MovieClass[] = [
     2017,
     0.7
   ),
+  new MovieClass(
+    "https://thumb.wikimedia.org/wikipedia/en/thumb/d/d2/Back_to_the_Future.jpg/250px-Back_to_the_Future.jpg?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+    "Back to the Future",
+    1985,
+    0.6
+  ),
+  new MovieClass(
+    "https://thumb.wikimedia.org/wikipedia/en/thumb/3/3f/The_Empire_Strikes_Back_%281980_film%29.jpg/250px-The_Empire_Strikes_Back_%281980_film%29.jpg?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
+    "Star Wars: Empire Strikes Back",
+    1980,
+    0.8
+  ),
 ];
 
 movies.sort((a, b) => a.title.localeCompare(b.title, "pl"));
@@ -441,7 +453,6 @@ function App() {
     movie.title.toLowerCase().includes(movieSearch.toLowerCase())
   );
 
-  // elementy z filmami albo komunikat, gdy nic nie znaleziono
   let moviesContent;
   if (filteredMovies.length === 0) {
     moviesContent = (
